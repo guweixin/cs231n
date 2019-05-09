@@ -3,6 +3,7 @@ import numpy as np
 import pickle
 import os
 import time
+import operator
 class NearestNeighbor(object):
   def __init__(self):
     pass
@@ -13,11 +14,12 @@ class NearestNeighbor(object):
     self.Xtr = X
     self.ytr = y
 
-  def predict(self, X):
+  def predict(self, X, k):
     """ X is N x D where each row is an example we wish to predict label for """
     num_test = X.shape[0]
     # lets make sure that the output type matches the input type
     Ypred = np.zeros(num_test, dtype = self.ytr.dtype)
+    
     # loop over all test rows
     for i in range(num_test):
       # find the nearest training image to the i'th test image
@@ -25,10 +27,23 @@ class NearestNeighbor(object):
       ####distances = np.sum(np.abs(self.Xtr - X[i,:]), axis = 1)
       ''' 使用L2距离'''
       distances = np.sqrt(np.sum(np.square(self.Xtr - X[i,:]), axis = 1))
-      min_index = np.argmin(distances) # get the index with smallest distance
-      Ypred[i] = self.ytr[min_index] # predict the label of the nearest example
+      
+      sortedDistIndicies=distances.argsort() #排序并返回index
+      #选择距离最近的k个值
+      classCount={}
+      for i in range(k):
+        voteIlabel= self.ytr[sortedDistIndicies[i]]
+        #D.get(k[,d]) -> D[k] if k in D, else d. d defaults to None.
+        classCount[voteIlabel]=classCount.get(voteIlabel,0)+1
+    #排序
+    sortedClassCount=sorted(classCount.items(),key=operator.itemgetter(1),reverse=True)
+    return sortedClassCount[0][0]
 
-    return Ypred
+
+    #  min_index = np.argmin(distances) # get the index with smallest distance
+    #  Ypred[i] = self.ytr[min_index] # predict the label of the nearest example
+
+  #  return Ypred
 
 def load_CIFAR_batch(filename):
   """ load single batch of cifar """
@@ -74,7 +89,6 @@ Xval_rows = Xtr_rows[:1000, :] # take first 1000 for validation
 Yval = Ytr[:1000]
 Xtr_rows = Xtr_rows[1000:, :] # keep last 49,000 for train
 Ytr = Ytr[1000:]
-
 
 # find hyperparameters that work best on the validation set
 validation_accuracies = []
